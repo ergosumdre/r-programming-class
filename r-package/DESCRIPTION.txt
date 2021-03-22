@@ -1,1 +1,5 @@
-The purpose of this package is to create a data frame that is ready to be exported into Network Analysis Mapping Software, Gephi. This package will leverage Twitter API Data to build a list of edges and nodes, then arrange the data frame into a capable directed Gephi format. A Node will be classified as a Twitter User, and an Edge will be the act of Retweet.
+The purpose of this package is to create a data frame that is ready to be
+exported into Network Analysis Mapping Software, Gephi. This package will 
+leverage Twitter API Data to build a list of edges and nodes, then 
+arrange the data frame into a capable directed Gephi format. A Node will 
+be classified as a Twitter User, and an Edge will be the act of Retweet.
