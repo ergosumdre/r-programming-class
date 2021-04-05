@@ -1,0 +1,156 @@
+---
+title: "gephi-ready-csv"
+author: "Dre Dyson"
+date: "4/5/2021"
+output: html_document
+---
+
+# Introduction
+This R Package will allow you to generate a GEPHI ready CSV file. GEPHI is a Free and Open Source network visualization tool commonly used in Academia. GEPHI allows you to explore, manipulate, and represent various techniques in Network Analysis. 
+
+---
+
+#### This Document will illustrate the process of creating the GEPHI ready file in the following steps:
+ + Data Mining with Twitter with R Package 'rtweet'
+ + Data Manipulate with popular R Package 'dplyr'
+ + Visualize Raw Tweets
+ + Creation on R Package Function
+
+---
+
+
+```{r packages}
+library("rtweet",warn.conflicts = F)
+library("dplyr",warn.conflicts = F)
+library("readr",warn.conflicts = F)
+library("ggplot2",warn.conflicts = F)
+library("data.table",warn.conflicts = F)
+options(scipen = 9999)
+
+```
+
+
+```{r proof_of_work, eval = F}
+#### Data Mining ####
+#### 
+# Find English only Tweets relating to the 2021 Derek Chauvin Trial
+
+tweets <- rtweet::search_tweets(q = "derek chauvin trial", 
+                                n = 18000,
+                                include_rts = T,
+                                lang = "en")
+# readr::write_excel_csv(tweets, "rtweet_output.csv")
+# End Find English only Tweets relating to the 2021 Derek Chauvin Trial
+
+
+```
+
+
+
+#### We are running this on my local computer. For the sake of the RMarkdown file, we save rTweet's output file. This helps with not having to re-run Twitter's API calls.
+
+
+
+```{r local_machine}
+tweets <- data.table::fread("/Users/dre/Downloads/module12/rtweet_output.csv")
+```
+
+
+#### Simple Data manipulation with dplyr
+
+
+```{r data_manipulation}
+#### DATA Manipulation ####
+#### 
+# Filter only records with RTs
+tweets_rts <- tweets %>% select(screen_name, retweet_name)
+tweets_rts <- tweets_rts %>% filter(!is.na(retweet_name))
+# End Filter only records with RTs
+
+
+# Change user_names to factors 
+tweets_rts <- tweets_rts %>% mutate(screen_name = as.factor(screen_name),
+                             retweet_screen_name = as.factor(retweet_name))
+# End Change user_names to factors 
+
+
+# Create Adjacency list with weight (n)
+twitter_adjacency <- tweets_rts %>% group_by(screen_name, retweet_name) %>% tally()  %>% arrange(desc(n))
+colnames(twitter_adjacency) <- c("Target", "Source", "Weight")
+
+twitter_adjacency <- twitter_adjacency %>% mutate(Type = "Undirected")
+# End Create adjacency list
+# 
+```
+
+
+#### Lets check out the output
+
+```{r output}
+head(twitter_adjacency)
+```
+
+#### Now lets create a simple Time Series Chart with the frequency of Tweets.
+
+
+```{r vis}
+rtweet::ts_plot(data = tweets, by = "hours") +
+  xlab("Date") +
+  ylab("Freq of Tweets")
+
+
+```
+
+
+#### This is the function I created so an user can supply their Twitter API information, along with the search query and number of tweets. \n
+See vignette("auth", package = "rtweet") for more information about obtaining a Twitter API
+
+
+```{r create_function, eval=F}
+twitter_gephi_file <- function(query, num_tweets,language, twitter_api_key, twitter_api_secret, app_name){
+  # Twitter Auth -- To see more visit vignette("auth", package = "rtweet")
+  api_key <- twitter_api_key
+  
+  api_secret_key <- twitter_api_secret
+  
+  token <- rtweet::create_token(app = app_name,
+                                consumer_key = api_key,
+                                consumer_secret = api_secret_key)
+  
+  tweets <- rtweet::search_tweets(q = query, 
+                                  n = num_tweets,
+                                  include_rts = T,
+                                  lang = language,
+                                  token = token)
+  # End Twitter Auth
+  
+  # Create adjacency list
+  tweets_rts <- tweets %>% dplyr::select(screen_name, retweet_screen_name)
+  
+  tweets_rts <- tweets_rts %>% dplyr::filter(!is.na(retweet_screen_name))
+  
+  tweets_rts <- tweets_rts %>% dplyr::mutate(screen_name = as.factor(screen_name),
+                             retweet_screen_name = as.factor(retweet_screen_name))
+  
+  twitter_adjacency <- tweets_rts %>% dplyr::group_by(screen_name, retweet_screen_name) %>% 
+    tally() %>% 
+    arrange(desc(n))
+  
+  colnames(twitter_adjacency) <- c("Target", "Source", "Weight")
+  twitter_adjacency <- twitter_adjacency %>% dplyr::mutate(Type = "Directed")
+  # End adjacency list
+  return(twitter_adjacency)
+}
+
+```
+
+NOT RUN
+```{r run_function, eval=F}
+twitter_network <- twitter_gephi_file(query = "derek chauvin trial",
+                                      num_tweets = 18000,
+                                      language = "en", 
+                                      twitter_api_key = "XXXXXXXX",
+                                      twitter_api_secret = "XXXXXXX",
+                                      app_name = "XXXXX")
+
+```
